@@ -1,0 +1,6 @@
+Bwl.Hardware.CatUart
+Igor Koshelev (igor@lifemotion.ru)
+
+Packet master-slave protocol for serial buses.
+Integrated CRC, addresses, identifiers etc.
+AVR C code also presents.
