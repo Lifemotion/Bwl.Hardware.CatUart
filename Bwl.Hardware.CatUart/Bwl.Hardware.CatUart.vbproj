@@ -48,9 +48,16 @@
     <OptionInfer>On</OptionInfer>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Bwl.Framework, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Libs\bwl.Framework\bwl.Framework\dllOut\Bwl.Framework.dll</HintPath>
+    </Reference>
     <Reference Include="Bwl.Hardware.Serial.Common, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\Bwl.Hardware.Serial\Bwl.Hardware.Serial.Common\dllOut\Bwl.Hardware.Serial.Common.dll</HintPath>
+      <HintPath>..\..\Bwl.Hardware.Serial\bwl.Hardware.Serial.Common\dllOut\Bwl.Hardware.Serial.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="Bwl.Hardware.Serial.SerialPort">
+      <HintPath>..\..\Bwl.Hardware.Serial\bwl.Hardware.Serial.SerialPort\dllOut\Bwl.Hardware.Serial.SerialPort.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
@@ -58,6 +65,7 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Import Include="Bwl.Framework" />
     <Import Include="Bwl.Hardware.Serial" />
     <Import Include="Microsoft.VisualBasic" />
     <Import Include="System" />
@@ -68,7 +76,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CatUart.vb" />
-    <Compile Include="CatUartBus.vb" />
+    <Compile Include="CatUartManager.vb" />
     <Compile Include="Emulator\CatUartVirtualDevice.vb" />
     <Compile Include="Emulator\VirtualTwoSwitch.vb" />
     <Compile Include="Emulator\VirtualTwoSwitchVisualiser.Designer.vb">

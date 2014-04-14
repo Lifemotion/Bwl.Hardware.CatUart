@@ -50,13 +50,17 @@
     <OptionInfer>On</OptionInfer>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Bwl.Framework, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Libs\bwl.Framework\bwl.Framework\dllOut\Bwl.Framework.dll</HintPath>
+    </Reference>
     <Reference Include="Bwl.Hardware.Serial.Common, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\Bwl.Hardware.Serial\Bwl.Hardware.Serial.Common\dllOut\Bwl.Hardware.Serial.Common.dll</HintPath>
+      <HintPath>..\..\Bwl.Hardware.Serial\bwl.Hardware.Serial.Common\dllOut\Bwl.Hardware.Serial.Common.dll</HintPath>
     </Reference>
     <Reference Include="Bwl.Hardware.Serial.SerialPort, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\Bwl.Hardware.Serial\Bwl.Hardware.Serial.SerialPort\dllOut\Bwl.Hardware.Serial.SerialPort.dll</HintPath>
+      <HintPath>..\..\Bwl.Hardware.Serial\bwl.Hardware.Serial.SerialPort\dllOut\Bwl.Hardware.Serial.SerialPort.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -108,7 +112,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\bwl.Hardware.CatUart\Bwl.Hardware.CatUart.vbproj">
-      <Project>{40FB2210-67DB-4F93-8A57-7D9B5B039C7E}</Project>
+      <Project>{40fb2210-67db-4f93-8a57-7d9b5b039c7e}</Project>
       <Name>Bwl.Hardware.CatUart</Name>
     </ProjectReference>
   </ItemGroup>

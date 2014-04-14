@@ -15,7 +15,6 @@ Public Enum ResponseState
     errorTimeout
     errorFormat
     errorCrc
-
     errorPacketType
-
+    errorNotRequested
 End Enum
