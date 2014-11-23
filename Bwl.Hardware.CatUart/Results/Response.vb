@@ -7,7 +7,8 @@
     Public Property Type As Integer
     Public Property ResponseState As ResponseState
     Public Property Address As Integer
-    Public Property Data As Integer() = Array.CreateInstance(GetType(Integer), 16)
+    Public Property Data As Integer() = Array.CreateInstance(GetType(Integer), 1024)
+    Public Property DataLength As Integer
 End Class
 
 Public Enum ResponseState
@@ -17,4 +18,7 @@ Public Enum ResponseState
     errorCrc
     errorPacketType
     errorNotRequested
+
+    errorPortError
+
 End Enum

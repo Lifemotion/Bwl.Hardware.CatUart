@@ -10,7 +10,6 @@ Public Class CatUart
 
     Public Sub New(serial As ISerialDevice)
         _serial = serial
-        _serial.DeviceSpeed=9600
         _serial.AutoReadBytes = False
     End Sub
 
@@ -34,20 +33,57 @@ Public Class CatUart
     ''' </summary>
     ''' <param name="data"></param>
     ''' <remarks></remarks>
-    Protected Sub FitToByte(ByRef data As Integer)
+    Protected Function FitToByte1(data As Integer) As Byte
         If data < 0 Then data = 0
         If data > 255 Then data = 255
         Dim tmp As Byte = data
         tmp = tmp And 127
         data = tmp
+        Return data
+    End Function
+
+    Public Sub SendPacket(packet As Request)
+        SendPacket(packet.Address, packet.Command, packet.Data, packet.PreferredType)
     End Sub
 
-    Protected Sub SendPacket(packet As Request)
-        SendPacket(packet.Address, packet.Command, packet.Data)
+    Public Sub SendPacket(address As Integer, command As Integer, data1 As Integer(), type As Integer)
+        If type = 0 Then SendPacket01(address, command, data1)
+        If type = 1 Then SendPacket01(address, command, data1)
+        If type = 5 Then SendPacket05(address, command, data1)
+        If type = 8 Then SendPacket08(address, command, data1)
+        If type = 10 Then SendPacket10(address, command, data1)
     End Sub
 
-    Protected Sub SendPacket(address As Integer, command As Integer, data1 As Integer())
-        SendPacket08(address, command, data1)
+    Protected Sub SendPacketUniversalCrc8(typecode As Byte, address As Integer, command As Integer, data As Integer(), datalength As Integer, fixeddatalenth As Boolean, crcstart As Byte)
+        If datalength > 127 Then datalength = 127
+        Dim bytes(1024) As Byte
+        bytes(0) = 0
+        bytes(1) = &HFE
+        bytes(2) = address \ 128 \ 128
+        bytes(3) = (address \ 128) Mod 128
+        bytes(4) = address Mod 128
+        bytes(5) = typecode
+        bytes(6) = FitToByte1(command)
+        Dim offset = 7
+        If Not fixeddatalenth Then bytes(7) = datalength : offset += 1
+        For i = 0 To datalength - 1
+            bytes(offset + i) = FitToByte1(data(i))
+        Next
+        bytes(offset + datalength) = FitToByte1(Crc8.ComputeCrc(crcstart, bytes, 2, offset + datalength - 1))
+        bytes(offset + datalength + 1) = &HFC
+        ReDim Preserve bytes(offset + datalength + 1)
+        _serial.Write(bytes)
+    End Sub
+
+    ''' <summary>
+    ''' Отправка пакета типа 1 - 0-127 байт данных, 1xCRC8
+    ''' </summary>
+    ''' <param name="address"></param>
+    ''' <param name="command"></param>
+    ''' <param name="data"></param>
+    ''' <remarks></remarks>
+    Protected Sub SendPacket01(address As Integer, command As Integer, data As Integer())
+        SendPacketUniversalCrc8(1, address, command, data, data.Length, False, 170)
     End Sub
 
     ''' <summary>
@@ -55,59 +91,32 @@ Public Class CatUart
     ''' </summary>
     ''' <param name="address"></param>
     ''' <param name="command"></param>
-    ''' <param name="data1"></param>
+    ''' <param name="data"></param>
     ''' <remarks></remarks>
-    Protected Sub SendPacket08(address As Integer, command As Integer, data1 As Integer())
-        Dim data = data1.Clone
-        ReDim Preserve data(32)
-        FitToByte(command)
-        FitToByte(data(0))
-        FitToByte(data(1))
-        FitToByte(data(2))
-        FitToByte(data(3))
-        Dim type As Byte = &H8
-        Dim bytes(12) As Byte
-        bytes(0) = 0
-        bytes(1) = &HFE
-        bytes(2) = address \ 128 \ 128
-        bytes(3) = (address \ 128) Mod 128
-        bytes(4) = address Mod 128
-        bytes(5) = type
-        bytes(6) = command
-        bytes(7) = data(0)
-        bytes(8) = data(1)
-        bytes(9) = data(2)
-        bytes(10) = data(3)
-        bytes(11) = Crc8.ComputeCrc(170, bytes, 2, 10)
-        bytes(12) = &HFC
-        FitToByte(bytes(11))
-        _serial.Write(bytes)
+    Protected Sub SendPacket08(address As Integer, command As Integer, data As Integer())
+        SendPacketUniversalCrc8(8, address, command, data, 4, True, 170)
     End Sub
 
     ''' <summary>
-    ''' Отправка пакета типа 5 - 0 байт данных, 1xCRC8
+    ''' Отправка пакета типа 10 - 8 байт данных, 1xCRC8
     ''' </summary>
     ''' <param name="address"></param>
     ''' <param name="command"></param>
-    ''' <param name="data1"></param>
+    ''' <param name="data"></param>
     ''' <remarks></remarks>
-    Protected Sub SendPacket05(address As Integer, command As Integer, data1 As Integer())
-        Dim data = data1.Clone
-        ReDim Preserve data(32)
-        FitToByte(command)
-        Dim type As Byte = &H5
-        Dim bytes(8) As Byte
-        bytes(0) = 0
-        bytes(1) = &HFE
-        bytes(2) = address \ 128 \ 128
-        bytes(3) = (address \ 128) Mod 128
-        bytes(4) = address Mod 128
-        bytes(5) = type
-        bytes(6) = command
-        bytes(7) = Crc8.ComputeCrc(170, bytes, 2, 6)
-        bytes(8) = &HFC
-        FitToByte(bytes(7))
-        _serial.Write(bytes)
+    Protected Sub SendPacket10(address As Integer, command As Integer, data As Integer())
+        SendPacketUniversalCrc8(&H10, address, command, data, 8, True, 170)
+    End Sub
+
+    ''' <summary>
+    ''' Отправка пакета типа 5 - нет байт данных, 1xCRC8
+    ''' </summary>
+    ''' <param name="address"></param>
+    ''' <param name="command"></param>
+    ''' <param name="data"></param>
+    ''' <remarks></remarks>
+    Protected Sub SendPacket05(address As Integer, command As Integer, data As Integer())
+        SendPacketUniversalCrc8(&H5, address, command, data, 0, True, 170)
     End Sub
 
     Public Property RequestTimeout As Integer = 1000
@@ -130,77 +139,58 @@ Public Class CatUart
     ''' <returns></returns>
     ''' <remarks></remarks>
     Public Function Request(address As Integer, command As Integer, dataRequest As Integer()) As Response
-        Return Request(address, command, dataRequest, 8)
+        Return Request(address, command, dataRequest, 1)
     End Function
 
     Private _readBufferPos As Integer
-    Private _readBuffer(32) As Byte
+    Private _readBuffer(1024) As Byte
 
     Public Function Read() As Response
         SyncLock _syncRoot
             Dim result As New Response
             result.ResponseState = ResponseState.errorNotRequested
-
             SyncLock _serial
-                Do While _serial.ReceivedBufferCount > 0 And result.ResponseState <> ResponseState.ok
-                    Dim data = _serial.Read()
-                    ReadBytes += 1
-                    Select Case data
-                        Case &HFD
-                            _readBufferPos = 0
-                        Case &HFB
-                            Debug.WriteLine(_readBufferPos.ToString)
-                            result.Address = _readBuffer(0) * 128 * 128 + _readBuffer(1) * 128 + _readBuffer(2)
-                            result.Type = _readBuffer(3)
-                            If result.Type = 8 Then
-                                If _readBufferPos = 10 Then
-                                    result.Response = _readBuffer(4)
-                                    result.Data(0) = _readBuffer(5)
-                                    result.Data(1) = _readBuffer(6)
-                                    result.Data(2) = _readBuffer(7)
-                                    result.Data(3) = _readBuffer(8)
-                                    Dim crc1 = _readBuffer(9)
-                                    Dim crc1real = Crc8.ComputeCrc(&HAA, _readBuffer, 0, 8) Mod 128
-                                    If crc1 = crc1real Then
-                                        result.ResponseState = ResponseState.ok
-                                    Else
-                                        result.ResponseState = ResponseState.errorCrc
-                                    End If
-                                Else
-                                    result.ResponseState = ResponseState.errorFormat
+                Dim readSuccess As Boolean = True
+                Dim data As Byte
+                Do While result.ResponseState <> ResponseState.ok And readSuccess
+                    readSuccess = False
+                    Try
+                        If _serial.ReceivedBufferCount > 0 Then
+                            data = _serial.Read()
+                            readSuccess = True
+                        End If
+                    Catch ex As Exception
+                        result.ResponseState = ResponseState.errorPortError
+                        Return result
+                    End Try
+                    If readSuccess Then
+                        ReadBytes += 1
+                        Select Case data
+                            Case &HFD
+                                _readBufferPos = 0
+                            Case &HFB
+                                Debug.WriteLine(_readBufferPos.ToString)
+                                result.Address = _readBuffer(0) * 128 * 128 + _readBuffer(1) * 128 + _readBuffer(2)
+                                result.Type = _readBuffer(3)
+                                Select Case result.Type
+                                    Case 5 : ProcessPacketCrc8(result, 0, True, _readBufferPos, _readBuffer)
+                                    Case 8 : ProcessPacketCrc8(result, 4, True, _readBufferPos, _readBuffer)
+                                    Case 10, &H10 : ProcessPacketCrc8(result, 8, True, _readBufferPos, _readBuffer)
+                                    Case 1 : ProcessPacketCrc8(result, 0, False, _readBufferPos, _readBuffer)
+                                    Case Else
+                                        result.ResponseState = ResponseState.errorPacketType
+                                End Select
+                                _readBufferPos = 0
+
+                            Case Else
+                                If _readBufferPos < _readBuffer.Length - 1 Then
+                                    _readBuffer(_readBufferPos) = data
+                                    _readBufferPos += 1
                                 End If
-                            ElseIf result.Type = 10 Then
-                                If _readBufferPos = 14 Then
-                                    result.Response = _readBuffer(4)
-                                    result.Data(0) = _readBuffer(5)
-                                    result.Data(1) = _readBuffer(6)
-                                    result.Data(2) = _readBuffer(7)
-                                    result.Data(3) = _readBuffer(8)
-                                    result.Data(4) = _readBuffer(9)
-                                    result.Data(5) = _readBuffer(10)
-                                    result.Data(6) = _readBuffer(11)
-                                    result.Data(7) = _readBuffer(12)
-                                    Dim crc1 = _readBuffer(13)
-                                    Dim crc1real = Crc8.ComputeCrc(&HAA, _readBuffer, 0, 12) And 127
-                                    If crc1 = crc1real Then
-                                        result.ResponseState = ResponseState.ok
-                                    Else
-                                        result.ResponseState = ResponseState.errorCrc
-                                    End If
-                                Else
-                                    result.ResponseState = ResponseState.errorFormat
-                                End If
-                            Else
-                                result.ResponseState = ResponseState.errorPacketType
-                            End If
-                            _readBufferPos = 0
-                        Case Else
-                            If _readBufferPos < _readBuffer.Length - 1 Then
-                                _readBuffer(_readBufferPos) = data
-                                _readBufferPos += 1
-                            End If
-                    End Select
+                        End Select
+                    End If
                 Loop
+
             End SyncLock
             If result.ResponseState = ResponseState.ok Then
                 Return result
@@ -211,6 +201,32 @@ Public Class CatUart
     End Function
 
     Public Property ReadBytes As Long
+
+
+    Public Sub ProcessPacketCrc8(result As Response, datalength As Integer, fixeddatalength As Boolean, ByRef receivedLength As Integer, receivedBuffer() As Byte)
+
+        result.Response = receivedBuffer(4)
+        result.DataLength = 0
+        Dim offset = 5
+        If Not fixeddatalength Then datalength = receivedBuffer(5) : offset += 1
+
+        If receivedLength = offset + datalength + 1 Then
+            For i = 0 To datalength - 1
+                result.Data(i) = receivedBuffer(i + offset)
+            Next
+            Dim crc1 = receivedBuffer(offset + datalength)
+            Dim crc1real = Crc8.ComputeCrc(&HAA, receivedBuffer, 0, offset + datalength - 1) Mod 128
+            If crc1 = crc1real Then
+                result.ResponseState = ResponseState.ok
+                result.DataLength = datalength
+            Else
+                result.ResponseState = ResponseState.errorCrc
+            End If
+        Else
+            result.ResponseState = ResponseState.errorFormat
+        End If
+    End Sub
+
 
     ''' <summary>
     ''' Выполнить запрос и получить ответ. Тип пакета запроса может быть указан..
@@ -225,72 +241,51 @@ Public Class CatUart
         SyncLock _syncRoot
             Dim result As New Response
             SyncLock _serial
-                Do While _serial.ReceivedBufferCount > 0
-                    _serial.Read()
-                Loop
-                Select Case type
-                    Case 8
-                        SendPacket08(address, command, dataRequest)
-                    Case 5
-                        SendPacket05(address, command, dataRequest)
-                End Select
+                Try
+                    Do While _serial.ReceivedBufferCount > 0
+                        _serial.Read()
+                    Loop
+                Catch ex As Exception
+                End Try
+                SendPacket(address, command, dataRequest, type)
                 result.ResponseState = ResponseState.errorTimeout
                 Dim time = Now
                 Dim receivedLength As Integer
-                Dim receivedBuffer(32) As Byte
+                Dim receivedBuffer(1024) As Byte
+
 
                 Do While (Now - time).TotalMilliseconds < RequestTimeout And result.ResponseState = ResponseState.errorTimeout
-                    If _serial.ReceivedBufferCount > 0 Then
-                        Dim data = _serial.Read()
+
+                    Dim readSuccess As Boolean = False
+                    Dim data As Byte
+
+                    Try
+                        If _serial.ReceivedBufferCount > 0 Then
+                            data = _serial.Read()
+                            readSuccess = True
+                        End If
+                    Catch ex As Exception
+                        result.ResponseState = ResponseState.errorPortError
+                        Return result
+                    End Try
+
+                    If readSuccess Then
                         Select Case data
                             Case &HFD
                                 receivedLength = 0
                             Case &HFB
                                 result.Address = receivedBuffer(0) * 128 * 128 + receivedBuffer(1) * 128 + receivedBuffer(2)
                                 result.Type = receivedBuffer(3)
-                                If result.Type = 8 Then
-                                    If receivedLength = 10 Then
-                                        result.Response = receivedBuffer(4)
-                                        result.Data(0) = receivedBuffer(5)
-                                        result.Data(1) = receivedBuffer(6)
-                                        result.Data(2) = receivedBuffer(7)
-                                        result.Data(3) = receivedBuffer(8)
-                                        Dim crc1 = receivedBuffer(9)
-                                        Dim crc1real = Crc8.ComputeCrc(&HAA, receivedBuffer, 0, 8) Mod 128
-                                        If crc1 = crc1real Then
-                                            result.ResponseState = ResponseState.ok
-                                        Else
-                                            result.ResponseState = ResponseState.errorCrc
-                                        End If
-                                    Else
-                                        result.ResponseState = ResponseState.errorFormat
-                                    End If
-                                ElseIf result.Type = 10 Then
-                                    If receivedLength = 14 Then
-                                        result.Response = receivedBuffer(4)
-                                        result.Data(0) = receivedBuffer(5)
-                                        result.Data(1) = receivedBuffer(6)
-                                        result.Data(2) = receivedBuffer(7)
-                                        result.Data(3) = receivedBuffer(8)
-                                        result.Data(4) = receivedBuffer(9)
-                                        result.Data(5) = receivedBuffer(10)
-                                        result.Data(6) = receivedBuffer(11)
-                                        result.Data(7) = receivedBuffer(12)
-                                        Dim crc1 = receivedBuffer(13)
-                                        Dim crc1real = Crc8.ComputeCrc(&HAA, receivedBuffer, 0, 12) And 127
-                                        If crc1 = crc1real Then
-                                            result.ResponseState = ResponseState.ok
-                                        Else
-                                            result.ResponseState = ResponseState.errorCrc
-                                        End If
-                                    Else
-                                        result.ResponseState = ResponseState.errorFormat
-                                    End If
-                                Else
-                                    result.ResponseState = ResponseState.errorPacketType
-                                End If
+                                Select Case result.Type
+                                    Case 5 : ProcessPacketCrc8(result, 0, True, receivedLength, receivedBuffer)
+                                    Case 8 : ProcessPacketCrc8(result, 4, True, receivedLength, receivedBuffer)
+                                    Case 10, &H10 : ProcessPacketCrc8(result, 8, True, receivedLength, receivedBuffer)
+                                    Case 1 : ProcessPacketCrc8(result, 0, False, receivedLength, receivedBuffer)
+                                    Case Else
+                                        result.ResponseState = ResponseState.errorPacketType
+                                End Select
                             Case Else
-                                If receivedLength < 32 Then
+                                If receivedLength < receivedBuffer.Length - 1 Then
                                     receivedBuffer(receivedLength) = data
                                     receivedLength += 1
                                 End If

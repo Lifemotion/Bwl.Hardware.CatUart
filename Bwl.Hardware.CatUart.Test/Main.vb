@@ -8,11 +8,25 @@ Module Main
 
     Sub Main()
 
-        serial1.DeviceSpeed = 38400
-        serial1.DeviceAddress = "COM4"
-        serial1.Connect()
-
         Dim catUart As New CatUart(serial1)
+        serial1.DeviceSpeed = 38400
+        serial1.DeviceAddress = "COM7"
+        serial1.Connect()
+        '  Do
+        '     Console.ReadLine()
+
+        'catUart.SendPacket(0, 33, {1, 2, 3, 4}, 1)
+        '   catUart.SendPacket(0, 33, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}, 1)
+        '   Console.WriteLine(1)
+
+        '    Dim pkt = catUart.Read()
+        '    If pkt IsNot Nothing Then
+        '    Beep()
+        '  Console.WriteLine(pkt.Data(1))
+        '    End If
+
+        '   Loop
+        '
         Dim sec As Integer
         Dim cnt = 0
 
