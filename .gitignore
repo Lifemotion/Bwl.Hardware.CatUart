@@ -6,4 +6,5 @@ bin
 dllOut
 obj
 *-debug
-dll-debug
+debug
+release
