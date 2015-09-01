@@ -1,6 +1,6 @@
 ﻿
 Public Class DeviceInfo
-    Inherits Response
+    Public Property Response As Response
 
     Property DeviceFamily As Integer
     Property DeviceModel As Integer

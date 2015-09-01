@@ -227,6 +227,15 @@ Public Class CatUart
         End If
     End Sub
 
+    Public Function RequestWithRetries(address As Integer, command As Integer, dataRequest As Integer(), retries As Integer) As Response
+        For i = 1 To retries - 1
+            Dim result = Request(address, command, dataRequest)
+            If result.ResponseState = ResponseState.ok Then Return result
+            Debug.WriteLine("Retry " + command.ToString)
+            Threading.Thread.Sleep(200)
+        Next
+        Return Request(address, command, dataRequest)
+    End Function
 
     ''' <summary>
     ''' Выполнить запрос и получить ответ. Тип пакета запроса может быть указан..
@@ -338,11 +347,10 @@ Public Class CatUart
     ''' <remarks></remarks>
     Public Function RequestDeviceInfo(address As Integer) As DeviceInfo
         Dim result = Request(address, 120, {}, 5)
-        Dim info As DeviceInfo = result
+        Dim info As New DeviceInfo With {.Response = result}
 
         If result.ResponseState = ResponseState.ok Then
             If result.Response = 121 Then
-                info.Address = result.Address
                 info.DeviceFamily = result.Data(0) * 256 + result.Data(1)
                 info.DeviceVersion = result.Data(3)
                 info.DeviceModel = result.Data(2)
@@ -354,7 +362,7 @@ Public Class CatUart
             ' Throw New Exception("RequestDeviceInfo " + result.ResponseState.ToString)
         End If
 
-        Return result
+        Return info
     End Function
 
 End Class
